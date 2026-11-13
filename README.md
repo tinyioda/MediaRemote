@@ -22,7 +22,7 @@ global, so they work no matter which app has focus.
   `VK_VOLUME_MUTE`) a hardware volume button sends. That's the standard
   approach, not a workaround.
 
-## Controls
+## Controls (defaults)
 
 | Button       | Action         |
 |--------------|----------------|
@@ -33,14 +33,35 @@ global, so they work no matter which app has focus.
 | Left bumper  | Volume down    |
 | Right bumper | Volume up      |
 
+These can be changed at any time from the tray menu — see
+[Remapping controls](#remapping-controls) below.
+
 The tray icon's right-click menu has:
+- **Controller: Connected / Disconnected** — a status label (not clickable)
+  showing whether a controller is currently detected.
 - **Enable / Disable** — toggles whether button presses do anything. Disabling
   keeps the app running but stops it from acting on the controller at all, so
   it won't interfere with normal controller use (e.g. gaming).
+- **Remap...** — opens a window to reassign which button triggers each
+  action.
 - **Close** — exits the app.
 
-To change the mapping, edit the `if (pressed.HasFlag(...))` block in
-[`src/GamepadService.cs`](src/GamepadService.cs).
+## Remapping controls
+
+Right-click the tray icon and choose **Remap...**. Each action has a dropdown
+for the button that triggers it. Picking a button that's already assigned to
+another action swaps the two, so the mapping always stays one-to-one — you
+can never end up with two actions on the same button, or a button that does
+nothing.
+
+- **Save** applies the change immediately and writes it to
+  `%AppData%\MediaRemote\mapping.json`, so it persists across restarts.
+- **Restore Defaults** resets the dropdowns back to the factory mapping above
+  (still requires **Save** to apply).
+- **Cancel** discards any changes made in the window.
+
+Only A, B, X, Y, and the two bumpers can be assigned — the D-pad, Start,
+Back, and thumbstick clicks are intentionally left alone.
 
 ## Requirements
 
@@ -70,6 +91,17 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 The output goes to
 `src/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/MediaRemote.exe`.
+
+### Running tests
+
+```sh
+dotnet test
+```
+
+This runs the `tests/MediaRemote.Tests` xUnit project, which covers the
+button-mapping logic (`ButtonMapping`) in isolation — the actual XInput
+polling, WinRT media session calls, and UI aren't practically unit-testable,
+so those are verified manually (see each PR's test plan).
 
 ## Running
 

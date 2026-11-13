@@ -4,8 +4,9 @@ namespace MediaRemote;
 
 /// <summary>
 /// Polls the first connected Xbox controller via XInput and dispatches whatever
-/// ButtonMapper says newly-pressed buttons map to. XInput (not Windows.Gaming.Input)
-/// is used deliberately: WGI's Gamepad/RawGameController only deliver live readings
+/// the current Mapping says newly-pressed buttons map to. XInput (not
+/// Windows.Gaming.Input) is used deliberately: WGI's Gamepad/RawGameController only
+/// deliver live readings
 /// to the foreground window for classic Win32 apps, so a background tray app like
 /// this one sees the controller but never gets button state from it. XInput has no
 /// such restriction.
@@ -42,6 +43,14 @@ internal sealed class GamepadService : IDisposable
     public bool Enabled { get; set; } = true;
 
     public bool IsConnected { get; private set; }
+
+    public ButtonMapping Mapping { get; private set; } = MappingStore.Load();
+
+    public void UpdateMapping(ButtonMapping mapping)
+    {
+        Mapping = mapping;
+        MappingStore.Save(mapping);
+    }
 
     /// <summary>Raised on the UI thread whenever the controller connects or disconnects.</summary>
     public event EventHandler<bool>? ConnectionChanged;
@@ -87,7 +96,7 @@ internal sealed class GamepadService : IDisposable
             var pressed = buttons & ~_previousButtons;
             _previousButtons = buttons;
 
-            var actions = ButtonMapper.Map(pressed);
+            var actions = Mapping.Map(pressed);
             if (actions.Count == 0)
             {
                 return;
