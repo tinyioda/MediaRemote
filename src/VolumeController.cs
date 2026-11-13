@@ -8,8 +8,9 @@ namespace MediaRemote;
 /// </summary>
 internal static class VolumeController
 {
-    private const byte VK_VOLUME_UP = 0xAF;
+    private const byte VK_VOLUME_MUTE = 0xAD;
     private const byte VK_VOLUME_DOWN = 0xAE;
+    private const byte VK_VOLUME_UP = 0xAF;
     private const uint KEYEVENTF_KEYUP = 0x2;
 
     [DllImport("user32.dll")]
@@ -18,6 +19,8 @@ internal static class VolumeController
     public static void VolumeUp() => Press(VK_VOLUME_UP);
 
     public static void VolumeDown() => Press(VK_VOLUME_DOWN);
+
+    public static void ToggleMute() => Press(VK_VOLUME_MUTE);
 
     private static void Press(byte vk)
     {

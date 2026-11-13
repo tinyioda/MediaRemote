@@ -5,11 +5,12 @@ namespace MediaRemote;
 /// <summary>
 /// Polls the first connected Xbox controller and maps a few buttons to media/volume
 /// actions. Button mapping, change here if you want different controls:
-///   D-Pad Left  -> previous track
-///   D-Pad Right -> next track
-///   D-Pad Up    -> volume up
-///   D-Pad Down  -> volume down
-///   A           -> play/pause
+///   X -> previous track
+///   B -> next track
+///   A -> play/pause
+///   Y -> mute
+///   Left bumper  -> volume down
+///   Right bumper -> volume up
 /// </summary>
 internal sealed class GamepadService : IDisposable
 {
@@ -60,25 +61,29 @@ internal sealed class GamepadService : IDisposable
         _busy = true;
         try
         {
-            if (pressed.HasFlag(GamepadButtons.DPadLeft))
+            if (pressed.HasFlag(GamepadButtons.X))
             {
                 await MediaController.PreviousAsync();
             }
-            if (pressed.HasFlag(GamepadButtons.DPadRight))
+            if (pressed.HasFlag(GamepadButtons.B))
             {
                 await MediaController.NextAsync();
-            }
-            if (pressed.HasFlag(GamepadButtons.DPadUp))
-            {
-                VolumeController.VolumeUp();
-            }
-            if (pressed.HasFlag(GamepadButtons.DPadDown))
-            {
-                VolumeController.VolumeDown();
             }
             if (pressed.HasFlag(GamepadButtons.A))
             {
                 await MediaController.PlayPauseAsync();
+            }
+            if (pressed.HasFlag(GamepadButtons.Y))
+            {
+                VolumeController.ToggleMute();
+            }
+            if (pressed.HasFlag(GamepadButtons.LeftShoulder))
+            {
+                VolumeController.VolumeDown();
+            }
+            if (pressed.HasFlag(GamepadButtons.RightShoulder))
+            {
+                VolumeController.VolumeUp();
             }
         }
         catch
