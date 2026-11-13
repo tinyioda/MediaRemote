@@ -1,4 +1,4 @@
-# MediaRemote
+# Windows 11 Media Remote
 
 A tiny Windows tray app that turns an Xbox controller (connected over Bluetooth
 or USB) into a media remote: play/pause, skip tracks, volume, and mute — all
