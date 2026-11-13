@@ -12,12 +12,14 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         _statusItem = new ToolStripMenuItem(string.Empty) { Enabled = false };
         _toggleItem = new ToolStripMenuItem(string.Empty, null, OnToggleClicked);
+        var remapItem = new ToolStripMenuItem("Remap...", null, OnRemapClicked);
         var closeItem = new ToolStripMenuItem("Close", null, OnCloseClicked);
 
         var menu = new ContextMenuStrip();
         menu.Items.Add(_statusItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_toggleItem);
+        menu.Items.Add(remapItem);
         menu.Items.Add(closeItem);
 
         _notifyIcon = new NotifyIcon
@@ -49,6 +51,15 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         _toggleItem.Text = _gamepadService.Enabled ? "Disable" : "Enable";
         _notifyIcon.Text = _gamepadService.Enabled ? "MediaRemote (active)" : "MediaRemote (paused)";
+    }
+
+    private void OnRemapClicked(object? sender, EventArgs e)
+    {
+        using var form = new RemapForm(_gamepadService.Mapping);
+        if (form.ShowDialog() == DialogResult.OK && form.Result is not null)
+        {
+            _gamepadService.UpdateMapping(form.Result);
+        }
     }
 
     private void OnCloseClicked(object? sender, EventArgs e)
