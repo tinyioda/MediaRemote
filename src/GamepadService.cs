@@ -68,6 +68,11 @@ internal sealed class GamepadService : IDisposable
 
     public bool Enabled { get; set; } = true;
 
+    public bool IsConnected { get; private set; }
+
+    /// <summary>Raised on the UI thread whenever the controller connects or disconnects.</summary>
+    public event EventHandler<bool>? ConnectionChanged;
+
     public GamepadService()
     {
         _timer = new System.Windows.Forms.Timer { Interval = 50 };
@@ -84,8 +89,17 @@ internal sealed class GamepadService : IDisposable
 
         try
         {
-            if (!TryGetConnectedState(out var buttons))
+            var connected = TryGetConnectedState(out var buttons);
+            if (connected != IsConnected)
             {
+                IsConnected = connected;
+                ConnectionChanged?.Invoke(this, connected);
+            }
+
+            if (!connected)
+            {
+                // Clear so a reconnect starts clean and can't fire a phantom
+                // "newly pressed" action from stale state on the first tick back.
                 _previousButtons = Buttons.None;
                 return;
             }
