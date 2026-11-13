@@ -3,19 +3,12 @@ using System.Runtime.InteropServices;
 namespace MediaRemote;
 
 /// <summary>
-/// Polls the first connected Xbox controller via XInput and maps a few buttons to
-/// media/volume actions. XInput (not Windows.Gaming.Input) is used deliberately:
-/// WGI's Gamepad/RawGameController only deliver live readings to the foreground
-/// window for classic Win32 apps, so a background tray app like this one sees the
-/// controller but never gets button state from it. XInput has no such restriction.
-///
-/// Button mapping, change here if you want different controls:
-///   X -> previous track
-///   B -> next track
-///   A -> play/pause
-///   Y -> mute
-///   Left bumper  -> volume down
-///   Right bumper -> volume up
+/// Polls the first connected Xbox controller via XInput and dispatches whatever
+/// ButtonMapper says newly-pressed buttons map to. XInput (not Windows.Gaming.Input)
+/// is used deliberately: WGI's Gamepad/RawGameController only deliver live readings
+/// to the foreground window for classic Win32 apps, so a background tray app like
+/// this one sees the controller but never gets button state from it. XInput has no
+/// such restriction.
 /// </summary>
 internal sealed class GamepadService : IDisposable
 {
@@ -38,31 +31,11 @@ internal sealed class GamepadService : IDisposable
         public XInputGamepad Gamepad;
     }
 
-    [Flags]
-    private enum Buttons : ushort
-    {
-        None = 0,
-        DPadUp = 0x0001,
-        DPadDown = 0x0002,
-        DPadLeft = 0x0004,
-        DPadRight = 0x0008,
-        Start = 0x0010,
-        Back = 0x0020,
-        LeftThumb = 0x0040,
-        RightThumb = 0x0080,
-        LeftShoulder = 0x0100,
-        RightShoulder = 0x0200,
-        A = 0x1000,
-        B = 0x2000,
-        X = 0x4000,
-        Y = 0x8000,
-    }
-
     [DllImport("xinput1_4.dll")]
     private static extern int XInputGetState(int dwUserIndex, ref XInputState pState);
 
     private readonly System.Windows.Forms.Timer _timer;
-    private Buttons _previousButtons = Buttons.None;
+    private RemoteButtons _previousButtons = RemoteButtons.None;
     private int _connectedIndex = -1;
     private bool _busy;
 
@@ -100,7 +73,7 @@ internal sealed class GamepadService : IDisposable
             {
                 // Clear so a reconnect starts clean and can't fire a phantom
                 // "newly pressed" action from stale state on the first tick back.
-                _previousButtons = Buttons.None;
+                _previousButtons = RemoteButtons.None;
                 return;
             }
 
@@ -114,35 +87,16 @@ internal sealed class GamepadService : IDisposable
             var pressed = buttons & ~_previousButtons;
             _previousButtons = buttons;
 
-            if (pressed == Buttons.None)
+            var actions = ButtonMapper.Map(pressed);
+            if (actions.Count == 0)
             {
                 return;
             }
 
             _busy = true;
-            if (pressed.HasFlag(Buttons.X))
+            foreach (var action in actions)
             {
-                await MediaController.PreviousAsync();
-            }
-            if (pressed.HasFlag(Buttons.B))
-            {
-                await MediaController.NextAsync();
-            }
-            if (pressed.HasFlag(Buttons.A))
-            {
-                await MediaController.PlayPauseAsync();
-            }
-            if (pressed.HasFlag(Buttons.Y))
-            {
-                VolumeController.ToggleMute();
-            }
-            if (pressed.HasFlag(Buttons.LeftShoulder))
-            {
-                VolumeController.VolumeDown();
-            }
-            if (pressed.HasFlag(Buttons.RightShoulder))
-            {
-                VolumeController.VolumeUp();
+                await DispatchAsync(action);
             }
         }
         catch
@@ -156,7 +110,24 @@ internal sealed class GamepadService : IDisposable
         }
     }
 
-    private bool TryGetConnectedState(out Buttons buttons)
+    private static Task DispatchAsync(RemoteAction action) => action switch
+    {
+        RemoteAction.Previous => MediaController.PreviousAsync(),
+        RemoteAction.Next => MediaController.NextAsync(),
+        RemoteAction.PlayPause => MediaController.PlayPauseAsync(),
+        RemoteAction.Mute => RunSync(VolumeController.ToggleMute),
+        RemoteAction.VolumeDown => RunSync(VolumeController.VolumeDown),
+        RemoteAction.VolumeUp => RunSync(VolumeController.VolumeUp),
+        _ => Task.CompletedTask,
+    };
+
+    private static Task RunSync(Action action)
+    {
+        action();
+        return Task.CompletedTask;
+    }
+
+    private bool TryGetConnectedState(out RemoteButtons buttons)
     {
         // Stick with whichever slot was last connected to avoid flip-flopping
         // between slots if more than one controller is ever plugged in.
@@ -165,7 +136,7 @@ internal sealed class GamepadService : IDisposable
             var state = default(XInputState);
             if (XInputGetState(_connectedIndex, ref state) == 0)
             {
-                buttons = (Buttons)state.Gamepad.wButtons;
+                buttons = (RemoteButtons)state.Gamepad.wButtons;
                 return true;
             }
 
@@ -178,12 +149,12 @@ internal sealed class GamepadService : IDisposable
             if (XInputGetState(i, ref state) == 0)
             {
                 _connectedIndex = i;
-                buttons = (Buttons)state.Gamepad.wButtons;
+                buttons = (RemoteButtons)state.Gamepad.wButtons;
                 return true;
             }
         }
 
-        buttons = Buttons.None;
+        buttons = RemoteButtons.None;
         return false;
     }
 
