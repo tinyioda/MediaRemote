@@ -4,25 +4,33 @@ internal sealed class TrayApplicationContext : ApplicationContext
 {
     private readonly GamepadService _gamepadService = new();
     private readonly NotifyIcon _notifyIcon;
+    private readonly ToolStripMenuItem _statusItem;
     private readonly ToolStripMenuItem _toggleItem;
+    private readonly Icon _icon = RemoteIcon.Create();
 
     public TrayApplicationContext()
     {
+        _statusItem = new ToolStripMenuItem(string.Empty) { Enabled = false };
         _toggleItem = new ToolStripMenuItem(string.Empty, null, OnToggleClicked);
         var closeItem = new ToolStripMenuItem("Close", null, OnCloseClicked);
 
         var menu = new ContextMenuStrip();
+        menu.Items.Add(_statusItem);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_toggleItem);
         menu.Items.Add(closeItem);
 
         _notifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = _icon,
             Text = "MediaRemote",
             ContextMenuStrip = menu,
             Visible = true,
         };
 
+        _gamepadService.ConnectionChanged += (_, connected) => UpdateStatusLabel(connected);
+
+        UpdateStatusLabel(_gamepadService.IsConnected);
         UpdateToggleLabel();
     }
 
@@ -30,6 +38,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         _gamepadService.Enabled = !_gamepadService.Enabled;
         UpdateToggleLabel();
+    }
+
+    private void UpdateStatusLabel(bool connected)
+    {
+        _statusItem.Text = connected ? "Controller: Connected" : "Controller: Disconnected";
     }
 
     private void UpdateToggleLabel()
@@ -42,6 +55,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         _notifyIcon.Visible = false;
         _gamepadService.Dispose();
+        _icon.Dispose();
         ExitThread();
     }
 }
