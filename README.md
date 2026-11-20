@@ -106,6 +106,34 @@ so those are verified manually (see each PR's test plan).
 ## Running
 
 Just launch `MediaRemote.exe`. It has no window — look for its icon in the
-system tray. There's currently no installer or start-on-login setup; run it
-manually, or add a shortcut to `shell:startup` if you want it to launch
-automatically.
+system tray.
+
+## Installer
+
+`installer/` contains an [Inno Setup](https://jrsoftware.org/isdl.php) script
+that packages a self-contained build into `MediaRemoteSetup.exe`. The
+installer:
+
+- Lets the user choose an all-users install (Program Files, requires admin)
+  or a per-user install (`%LocalAppData%\Programs`, no admin needed) — the
+  same choice apps like Chrome or VS Code offer.
+- Asks whether MediaRemote should start automatically when the current user
+  logs in, when any user logs in (only offered for an all-users install), or
+  not at all.
+
+This is a packaging-only step, kept deliberately separate from the normal
+build — it is **not** part of `MediaRemote.slnx`, so `dotnet build`,
+`dotnet run`, and Debug/Release runs from Visual Studio never touch it.
+
+To build the installer:
+
+1. Install [Inno Setup 6](https://jrsoftware.org/isdl.php) (one-time, on the
+   machine producing the release).
+2. Run:
+
+   ```powershell
+   installer/build-installer.ps1 -Version 1.0.0
+   ```
+
+   This publishes a self-contained `win-x64` build and compiles it into
+   `installer/Output/MediaRemoteSetup.exe`.
